@@ -1,3 +1,6 @@
 from pymongo import MongoClient
+from config import mongo_uri
 
-print(type(MongoClient))
+client = MongoClient(mongo_uri)
+
+
