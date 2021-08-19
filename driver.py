@@ -63,7 +63,7 @@ class CentroEducativo():
         try:
             assert type(codigo_departamento)==int,  "El código de departamento debe ser un número entero"
             assert codigo_departamento in  range(1,15), "El codigo de departamento ingresado estar desde 1 hasta 14"
-            cursor = await self.__coleccion_ce.find({"DEPARTAMENTO": codigo_infraestructura},{"_id":0})
+            cursor = await self.__coleccion_ce.find({"DEPARTAMENTO": codigo_departamento},{"_id":0})
             return {
                 **devolucion_generador_exitosa,
                 respuesta:[cursor]
