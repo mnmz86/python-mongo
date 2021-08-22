@@ -1,3 +1,5 @@
+from  collections import OrderedDict
+import collections
 from typing import Callable, MutableMapping
 from pymongo.errors import (
     ConnectionFailure,
@@ -83,6 +85,56 @@ class EstilosImpresionCaracteres:
     mix_estilos: Callable[[tuple], str] = lambda *estilos: "".join([EstilosImpresionCaracteres.__dict__[i] for i in estilos])
 
 
+class __CodigosColores:
+    '''
+    Clase que heredan  las regiones y caracteres a colorear.
+    '''
+
+    #Colores: es el ultimo dígito
+    D = 0 #NEGRO
+    R = 1 #ROJO
+    G = 2 #VERDE
+    Y = 3 #AMARILLO
+    B = 4 #AZUL
+    M = 5 #MAGENTA
+    C = 6 #CIAN
+    W = 7 #BLANCO
+
+    # Región a colorear
+    CARACTER = 3
+    FONDO = 4
+    #CARACTER_CLARO = 9
+    #FONDO_CLARO = 10
+
+
+def __obtener_codigos(texto_o_fondo: int) -> tuple:
+    lista_codigos = []
+    for (k, v) in OrderedDict(__CodigosColores.__dict__).items():
+        if len(k)==1:
+            codigo = texto_o_fondo * 10 + v
+            codigo = f'\033[{codigo}m'
+            lista_codigos.append(codigo)
+    print(*lista_codigos)
+    return lista_codigos
+
+class ColoresImpresionDisponibles:
+    '''
+    Colores, regiones a colorear y tonalidades disponibles. Usan la primera letra en inglés,
+    salvo el negro, que para no confundir (la B de "black") con la B de "blue" (en ingles)
+    se usó la letra D (por Dark xD).
+    Se usan enteros para combinar de la siguiente manera:
+        Si se requiere...
+        > Texto azul : CARACTER*10 + B
+        > Fondo rojo: FONDO*10 + R
+        > Texto negro claro: FONDO_CLARO*10 + D
+    '''
+
+    
+    class CARACTER(__CodigosColores):
+        D, R, G, Y, B, M, G, W = __obtener_codigos(__CodigosColores.CARACTER)
+    class F0ND0:
+        D, R, G, Y, B, M, G, W = __obtener_codigos(__CodigosColores.FONDO)
+
 
 
 '''
@@ -121,47 +173,6 @@ resultados_fallidos = {
 }
 
 
-class CodigosColores:
-    '''
-    Clase que heredan  las regiones y caracteres a colorear.
-    '''
-
-    #Colores: es el ultimo dígito
-    D = 0 #NEGRO
-    R = 1 #ROJO
-    G = 2 #VERDE
-    Y = 3 #AMARILLO
-    B = 4 #AZUL
-    M = 5 #MAGENTA
-    C = 6 #CIAN
-    W = 7 #BLANCO
-
-
-class ColoresImpresionDisponibles:
-    '''
-    Colores, regiones a colorear y tonalidades disponibles. Usan la primera letra en inglés,
-    salvo el negro, que para no confundir (la B de "black") con la B de "blue" (en ingles)
-    se usó la letra D (por Dark xD).
-    Se usan enteros para combinar de la siguiente manera:
-        Si se requiere...
-        > Texto azul : CARACTER*10 + B
-        > Fondo rojo: FONDO*10 + R
-        > Texto negro claro: FONDO_CLARO*10 + D
-    '''
-
-    def variables_colores(texto_o_fondo: int) -> None:
-        for (k, v) in CodigosColores.__dict__:
-            if len(k)==1:
-                locals()[k] = texto_o_fondo* 10 + v
-    class CARACTER:
-        variables_colores(3)
-    class F0ND0:
-        variables_colores(4)
-    class CARACTER_CLARO :
-        variales_colores(9)
-    class FONDO_CLARO:
-        variables_colores(10)
-
 
 
 if __name__=="__main__":
@@ -192,4 +203,12 @@ if __name__=="__main__":
         print(EstilosImpresionCaracteres.NORMAL + "Sin formato")
         print(EstilosImpresionCaracteres.mix_estilos("NEGRITA", "CURSIVA", "INVERTIR"))
 
-    #print(ColoresImpresionDisponibles.R)
+
+        print(EstilosImpresionCaracteres.NORMAL + "Hola", sep="\n")
+        print(ColoresImpresionDisponibles.CARACTER.R + "Hola hola", sep="\n")
+        print(ColoresImpresionDisponibles.F0ND0.Y + "Hola hola", sep="\n")
+        print(ColoresImpresionDisponibles.CARACTER.C + "Hola hola", sep="\n")
+        print(ColoresImpresionDisponibles.F0ND0.M + "Hola hola", sep="\n")
+        print(EstilosImpresionCaracteres.NORMAL + "Hola", sep="\n")
+
+
