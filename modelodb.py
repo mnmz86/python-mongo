@@ -3,11 +3,15 @@ from typing import ( # Mejora las anotaciones en el código
     Union, 
     Optional, 
     Callable, 
-    Generator
+    Generator,
+    Exception
     ) 
-from config import * # Variables globales
+from configuracion import( # Variables globales
+    ErroresPrevistos as Error,
+    AtributosCentroEscolar as CE
+    )
 from functools import wraps # Preserva la información de funciones, como el nombre, lo uso en gestión de errores
-from pymongo import MongoClient, cursor
+from pymongo import MongoClient
 from pymongo.errors import (
     ConnectionFailure, 
     AutoReconnect, 
@@ -25,44 +29,55 @@ def with_error_handler(funcion: Callable) -> Callable:
     def decorador(*args: Union[int, str, dict], **kwargs: Optional[int]) -> dict:
         try:
             # Validación de errores específicos del método
+            
             if funcion.__name__ == "obtener_por_codigo":
-                assert type(args[1])==int, causas_fallo[no_numero]
-                assert args[1] > 9999, causas_fallo[numero_invalido]
+                assert type(args[1])==int, Error.no_numero
+                assert args[1] > 9999, Error.numero_invalido
             #if funcion.__name__ == "":
             #    pass
             resultado = funcion(*args, *kwargs)
-            print(resultado)
-            assert resultado[respuesta] != [], causas_fallo[busqueda_sin_resultados]
+            assert resultado[respuesta] != [], Error.BUSQUEDA_SIN_RESULTADOS
+            assert resultado[respuesta] != [None], Error.BUSQUEDA_SIN_RESULTADOS
             return resultado
-        except AssertionError as errores:
+        except AssertionError as error:
             return {
                 **resultados_fallidos,
-                respuesta: errores.args[0]
+                respuesta: error.args[0]
             }
-        except (AutoReconnect, ConnectionFailure) as errores:
+        except (AutoReconnect, ConnectionFailure) as error:
             return {
                 **resultados_fallidos, 
-                respuesta: causas_fallo[conexion_fallida] + "\n * ".join(errores.args)
+                respuesta: Error.CONEXION_FALLIDA + Error.detalles(error)
             }
-        except (ExecutionTimeout, ServerSelectionTimeoutError) as errores:
+        except (ExecutionTimeout, ServerSelectionTimeoutError) as error:
             return {
                 **resultados_fallidos, 
-                respuesta: causas_fallo[tiempo_excedido] + "\n * ".join(errores.args)
+                respuesta: Error.TIEMPO_EXCEDIDO + Error.detalles(error)
             }
-        except OperationFailure as errores:
+        except OperationFailure as error:
             return {
                 **resultados_fallidos,
-                respuesta: causas_fallo[peticiones_incorrectas]  + "\n * ".join(errores.args)
+                respuesta: Error.PETICIONES_INCORRECTAS + Error.detalles(error)
             }
-        except StopIteration as errores: # FALTA MANEJAR LOS GENERADORES
+        except StopIteration as error: # FALTA MANEJAR LOS GENERADORES
             return {
                 **resultados_fallidos,
-                respuesta: causas_fallo[fin_iteraciones] + "\n * ".join(errores.args)
+                respuesta: Error.FIN_ITERACIONES + Error.detalles(error)
             }
-        except Exception as errores:
+        except KeyError as error:
             return {
                 **resultados_fallidos,
-                respuesta: causas_fallo[otras_causas]  + "\n * ".join(errores.args)
+                respuesta: Error.FUERA_DE_RANGO + Error.detalles(error)
+            }
+        except ValueError as error:
+            return {
+                **resultados_fallidos,
+                respuesta: Error.NO_ES_NUMERO + Error.detalles(error)
+            }
+        except Exception as error:
+            return {
+                **resultados_fallidos,
+                respuesta: Error.OTRAS_CAUSAS  + Error.detalles(error)
             }
     return decorador
 
@@ -136,7 +151,7 @@ class CentroEducativo():
 
     @with_error_handler
     def actualizar_centro_educativo(self, modificacion_centro_educativo: dict) -> dict:
-        resultado_busqueda = self.obtener_por_codigo({CODIGO: modificacion_centro_educativo[CODIGO]})
+        resultado_busqueda = self.obtener_por_codigo({CE.CODIGO: modificacion_centro_educativo[CE.CODIGO]})
         centro_educativo_obtenido = resultado_busqueda[respuesta][0]
         resultado_actualizacion = __coleccion_ce.find_one_and_update(centro_educativo_obtenido, {"$set": modificacion_centro_educativo})
         del resultado_actualizacion["_id"]
@@ -144,7 +159,7 @@ class CentroEducativo():
 
     @with_error_handler
     def eliminar_centro_educativo(self, codigo_infraestructura: int) -> dict:
-        resultado_eliminacion = __coleccion_ce.find_one_and_delete({CODIGO: codigo_infraestructura})
+        resultado_eliminacion = __coleccion_ce.find_one_and_delete({CE.CODIGO: codigo_infraestructura})
         return [resultado_eliminacion]
 
 
@@ -155,18 +170,18 @@ if __name__ == "__main__":
     print(0, ce.estado_conexion)
 
     prueba_insert_1 = {
-        CODIGO: 13095,
-        NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
-        DEPARTAMENTO_CENTRO: "SAN MIGUEL",
-        MUNICIPIO_CENTRO: "SAN MIGUEL"
+        CE.CODIGO: 13095,
+        CE.NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
+        CE.DEPARTAMENTO_CENTRO: "SAN MIGUEL",
+        CE.MUNICIPIO_CENTRO: "SAN MIGUEL"
     }
-    prueba_insert_2 = {
-        CODIGO: 13095,
-        NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
-        DEPARTAMENTO_CENTRO: "SAN MIGUEL",
-        MUNICIPIO_CENTRO: "SAN MIGUEL"
+    prueba_insert_1 = {
+        CE.CODIGO: 13095,
+        CE.NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
+        CE.DEPARTAMENTO_CENTRO: "SAN MIGUEL",
+        CE.MUNICIPIO_CENTRO: "SAN MIGUEL"
+    }
 
-    }
 
     #ce.agregar_centro_educativo(prueba_insert_1)
     #ce.agregar_centro_educativo(prueba_insert_2)
