@@ -1,3 +1,4 @@
+from enum import unique
 from typing import ( # Mejora las anotaciones en el código
     Iterator,
     Union, 
@@ -5,7 +6,10 @@ from typing import ( # Mejora las anotaciones en el código
     Callable, 
     Generator
     )
+
+import pymongo
 from configuracion import( # Variables globales
+    ConfiguracionDB as DB,
     ErroresPrevistos as Error,
     AtributosCentroEscolar as CE,
     Respuestas as Resp
@@ -66,20 +70,45 @@ class CentroEducativo():
     def __init__(self) -> None:
         self.estado_conexion = self.__conexion_servidor_mongodb()
 
-    @con_gestion_de_errores #REVISADO
+    @con_gestion_de_errores
     def __conexion_servidor_mongodb(self) -> dict:
         global __coleccion_ce # Se utiliza global porque se modificará la variable.
-        cliente = MongoClient(open(".serverkey").read())
-        db = cliente["Evaluacion01"]
-        __coleccion_ce = db["CE"]
+        cliente = MongoClient(DB.URI)
+        db = cliente[DB.DB]
+        __coleccion_ce = db[DB.COLECCION]
+        #La primera vez, para ejecutar búsquedas
+        indices_busqueda = __coleccion_ce.index_information()
+        cadena_indices = ",".join(indices_busqueda.keys()) # Se unen como cadenas porque Mongo le concatena el tipo de índice como parte del nombre
+        if CE.CODIGO not in cadena_indices: 
+            respuesta_indice_CODIGO = __coleccion_ce.create_index([(CE.CODIGO, pymongo.ASCENDING)], unique=True)
+            respuesta_indice_CODIGO = Resp.preparar_respuesta(
+                Resp.EXITOSO, Resp.MENSAJE, 
+                (
+                    "Se creó el índice de búsqueda para " + CE.CODIGO,
+                    respuesta_indice_CODIGO
+                )
+            )
+            print(respuesta_indice_CODIGO)
+
+            if CE.NOMBRE not in cadena_indices:
+                respuesta_indice_NOMBRE = __coleccion_ce.create_index([(CE.NOMBRE, 'text')])
+                respuesta_indice_NOMBRE = Resp.preparar_respuesta(
+                    Resp.EXITOSO, Resp.MENSAJE, 
+                    (
+                        "Se creó el índice de búsqueda para " + CE.CODIGO,
+                        respuesta_indice_NOMBRE
+                    )
+                )
+                print(respuesta_indice_NOMBRE)
         return Resp.estado_conexion_exitoso()
-    #REVISADO
+
     def __ejecutar_busqueda(self, *args: Union[dict, Optional[int]]) -> dict:
         cursor = __coleccion_ce.find(args[0], {"_id":0})
         resultados_busqueda = list(cursor)
+        cursor.close()
         return Resp.devolucion_informacion_exitosa(resultados_busqueda)
 
-    @staticmethod #REVISADO
+    @staticmethod
     def funcion_generadora(cursor: Iterator,  cantidad_a_obtener: int, cantidad_por_pagina: int) -> Generator:
         if not cantidad_a_obtener:
             cantidad_a_obtener = __coleccion_ce.count()
@@ -120,7 +149,7 @@ class CentroEducativo():
                 "$diacriticSensitive": False
                 }
             }
-        centros_educativos = self.__ejecutar_busqueda({"NOMBRE": diccionario_busqueda})
+        centros_educativos = self.__ejecutar_busqueda(diccionario_busqueda)
         return centros_educativos
 
     @con_gestion_de_errores #REVISADO
@@ -151,7 +180,7 @@ class CentroEducativo():
 if __name__ == "__main__":
     ce = CentroEducativo()
 
-    print(0, ce.estado_conexion)
+    print(ce.estado_conexion)
 
     prueba_insert_1 = {
         CE.CODIGO: 13095,
@@ -160,8 +189,8 @@ if __name__ == "__main__":
         CE.MUNICIPIO_CENTRO: "SAN MIGUEL"
     }
 
-    print(ce.agregar_centro_educativo(prueba_insert_1))
-    print(ce.obtener_por_nombre("NIÑO JESUS DE PRAGA"))
+    #print(ce.agregar_centro_educativo(prueba_insert_1))
+    #print(ce.obtener_por_nombre("NIÑO JESÚS DE PRAGA"))
     #print(ce.eliminar_centro_educativo("13095"))
     #ce.agregar_centro_educativo(prueba_insert_2)
 

@@ -14,6 +14,11 @@ class Base_:
     def obtener_como_diccionario(cls): 
         return cls.__annotations__
 
+class ConfiguracionDB:
+    URI = open(".serverkey").read()
+    DB = "Evaluacion01"
+    COLECCION = "CE"
+
 
 class AtributosCentroEscolar(Base_):
     '''
@@ -149,7 +154,7 @@ class EstadosRespuesta:
 class TiposRespuesta:
     MENSAJE: str = "mensaje"
     LISTA: str = "lista"
-    GENERADOR: Iterator = None
+    GENERADOR: Iterator = "iterador"
 
 class TiposContenido:
     MENSAJE: str = "MENSAJE"
@@ -161,7 +166,7 @@ class Respuestas(AtributosRespuestasModeloDB, EstadosRespuesta, TiposRespuesta):
     Manejo de respuestas a las peticiones 
     '''
     @classmethod
-    def __preparar_respuesta(cls, estado: str, tipo: str, contenido: Union[str, list, Iterator]):
+    def preparar_respuesta(cls, estado: str, tipo: str, contenido: Union[str, list, Iterator]):
         return {
             cls.ESTADO: estado,
             cls.TIPO: tipo,
@@ -172,19 +177,19 @@ class Respuestas(AtributosRespuestasModeloDB, EstadosRespuesta, TiposRespuesta):
     @classmethod
     def estado_conexion_exitoso(cls):
         mensaje = "Conexión con el servidor exitosa."
-        return cls.__preparar_respuesta(cls.EXITOSO, cls.MENSAJE, mensaje)
+        return cls.preparar_respuesta(cls.EXITOSO, cls.MENSAJE, mensaje)
             
     @classmethod
     def devolucion_informacion_exitosa(cls, lista: list):
-        return cls.__preparar_respuesta(cls.EXITOSO, cls.LISTA, lista)
+        return cls.preparar_respuesta(cls.EXITOSO, cls.LISTA, lista)
 
     @classmethod
     def devolucion_generador_exitosa(cls, generador: Iterator):
-        return cls.__preparar_respuesta(cls.EXITOSO, cls.GENERADOR, generador)
+        return cls.preparar_respuesta(cls.EXITOSO, cls.GENERADOR, generador)
 
     @classmethod
     def resultados_fallidos(cls, mensaje: str, detalles_error: Exception):
-        return cls.__preparar_respuesta(cls.FALLIDO, cls.MENSAJE, mensaje + ErroresPrevistos.detalles(detalles_error))
+        return cls.preparar_respuesta(cls.FALLIDO, cls.MENSAJE, mensaje + ErroresPrevistos.detalles(detalles_error))
 
 class Test:
     def test_AtributosCentroEscolar():
