@@ -1,4 +1,4 @@
-from enum import unique
+from threading import local
 from typing import ( # Mejora las anotaciones en el código
     Iterator,
     Union, 
@@ -6,8 +6,6 @@ from typing import ( # Mejora las anotaciones en el código
     Callable, 
     Generator
     )
-
-import pymongo
 from configuracion import( # Variables globales
     ConfiguracionDB as DB,
     ErroresPrevistos as Error,
@@ -15,7 +13,7 @@ from configuracion import( # Variables globales
     Respuestas as Resp
     )
 from functools import wraps # Preserva la información de funciones, como el nombre, lo uso en gestión de errores
-from pymongo import MongoClient
+from pymongo import MongoClient, ASCENDING
 from pymongo.errors import (
     ConnectionFailure, 
     AutoReconnect, 
@@ -23,6 +21,7 @@ from pymongo.errors import (
     ServerSelectionTimeoutError, 
     OperationFailure
     )
+
 
 
 def con_gestion_de_errores(funcion: Callable) -> Callable:
@@ -79,8 +78,12 @@ class CentroEducativo():
         #La primera vez, para ejecutar búsquedas
         indices_busqueda = __coleccion_ce.index_information()
         cadena_indices = ",".join(indices_busqueda.keys()) # Se unen como cadenas porque Mongo le concatena el tipo de índice como parte del nombre
+        v = None
+        if CE.CODIGO not in cadena_indices or CE.NOMBRE not in cadena_indices:
+            from vista import Visualizador
+            v = Visualizador()
         if CE.CODIGO not in cadena_indices: 
-            respuesta_indice_CODIGO = __coleccion_ce.create_index([(CE.CODIGO, pymongo.ASCENDING)], unique=True)
+            respuesta_indice_CODIGO = __coleccion_ce.create_index([(CE.CODIGO, ASCENDING)], unique=True)
             respuesta_indice_CODIGO = Resp.preparar_respuesta(
                 Resp.EXITOSO, Resp.MENSAJE, 
                 (
@@ -88,18 +91,21 @@ class CentroEducativo():
                     respuesta_indice_CODIGO
                 )
             )
-            print(respuesta_indice_CODIGO)
-
-            if CE.NOMBRE not in cadena_indices:
-                respuesta_indice_NOMBRE = __coleccion_ce.create_index([(CE.NOMBRE, 'text')])
-                respuesta_indice_NOMBRE = Resp.preparar_respuesta(
-                    Resp.EXITOSO, Resp.MENSAJE, 
-                    (
-                        "Se creó el índice de búsqueda para " + CE.CODIGO,
-                        respuesta_indice_NOMBRE
-                    )
+            v.visualizar_mensaje(respuesta_indice_CODIGO)
+            
+        if CE.NOMBRE not in cadena_indices:
+            respuesta_indice_NOMBRE = __coleccion_ce.create_index([(CE.NOMBRE, 'text')])
+            respuesta_indice_NOMBRE = Resp.preparar_respuesta(
+                Resp.EXITOSO, Resp.MENSAJE, 
+                (
+                    "Se creó el índice de búsqueda para " + CE.CODIGO,
+                    respuesta_indice_NOMBRE
                 )
-                print(respuesta_indice_NOMBRE)
+            )
+            v.visualizar_mensaje(respuesta_indice_NOMBRE)
+
+            del v, Visualizador
+
         return Resp.estado_conexion_exitoso()
 
     def __ejecutar_busqueda(self, *args: Union[dict, Optional[int]]) -> dict:
@@ -176,42 +182,60 @@ class CentroEducativo():
         return Resp.devolucion_informacion_exitosa([resultado_eliminacion])
 
 
-
-if __name__ == "__main__":
+class TestModeloDB:
+    """Pruebas de conexion a BD"""
+    
     ce = CentroEducativo()
 
-    print(ce.estado_conexion)
+    def test_EstadoConexion():
+        
+        from vista import Visualizador
+        v = Visualizador()
+        v.visualizar_mensaje(TestModeloDB.ce.estado_conexion)
+        
+        print(TestModeloDB.ce.estado_conexion)
 
-    prueba_insert_1 = {
-        CE.CODIGO: 13095,
-        CE.NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
-        CE.DEPARTAMENTO_CENTRO: "SAN MIGUEL",
-        CE.MUNICIPIO_CENTRO: "SAN MIGUEL"
-    }
+    def  test_AgregarYBuscarCE():
+        prueba_insert_1 = {
+            CE.CODIGO: 13095,
+            CE.NOMBRE: "CENTRO ESCOLAR NIÑO JESÚS DE PRAGA",
+            CE.DEPARTAMENTO_CENTRO: "SAN MIGUEL",
+            CE.MUNICIPIO_CENTRO: "SAN MIGUEL"
+        }
+        print(TestModeloDB.ce.agregar_centro_educativo(prueba_insert_1))
+        print(TestModeloDB.ce.obtener_por_nombre(prueba_insert_1[CE.NOMBRE]))
 
-    #print(ce.agregar_centro_educativo(prueba_insert_1))
-    #print(ce.obtener_por_nombre("NIÑO JESÚS DE PRAGA"))
-    #print(ce.eliminar_centro_educativo("13095"))
-    #ce.agregar_centro_educativo(prueba_insert_2)
-
-    """
-    # Prueba buscar por codigo de infraestructura
-    print(1, ce.obtener_por_codigo(0))
-    print(2, ce.obtener_por_codigo(10001))
-    print(3, ce.obtener_por_codigo("0"))
-    print(4, ce.obtener_por_codigo({"$gt": 10100}))
-    print(5, ce.obtener_por_codigo(100001))
-    """
-
-
-    """  
-    # Prueba generador
-    generador = ce.obtener_todos(29, 10)[Resp.CONTENIDO]
+    def test_ElimninarCE():
+        print(TestModeloDB.ce.eliminar_centro_educativo("13095"))
     
-    # Versión con bucle for.
-    for i in generador:
-        print (i, end="\n"*3)
-    """
+    def  test_BuscarPorCodigo():
+        """Prueba buscar por codigo de infraestructura"""
+        print(1, TestModeloDB.ce.obtener_por_codigo(0))
+        print(2, TestModeloDB.ce.obtener_por_codigo(10001))
+        print(3, TestModeloDB.ce.obtener_por_codigo("0"))
+        print(4, TestModeloDB.ce.obtener_por_codigo({"$gt": 10100}))
+        print(5, TestModeloDB.ce.obtener_por_codigo(100001))
+
+
+    def test_Generador():
+        """Prueba generador """
+        generador = TestModeloDB.ce.obtener_todos(29,10)[Resp.CONTENIDO]
+        # Versión con bucle for.
+        """
+        from vista import Visualizador
+        vista = Visualizador()
+        """
+        for lista_centros in generador:
+            #vista.visualizar_lista_centros(lista_centros)
+            print (lista_centros, end="\n"*3)
+
+
+
+if __name__ == "__main__":
+    #TestModeloDB.test_EstadoConexion()
+    #TestModeloDB.test_Generador()
+    
+
 
     
     """ 

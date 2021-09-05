@@ -1,13 +1,5 @@
 from  collections import OrderedDict
 from typing import Callable, Generator, Union, Iterator
-from warnings import catch_warnings
-from pymongo.errors import (
-    ConnectionFailure,
-    AutoReconnect,
-    ExecutionTimeout,
-    ServerSelectionTimeoutError,
-    OperationFailure
-    )
 
 class Base_:
     @classmethod
@@ -91,7 +83,6 @@ class EstilosImpresionCaracteres:
     # Devuelve estilos mezclados
     mix_estilos: Callable[[tuple], str] = lambda *estilos: "".join([EstilosImpresionCaracteres.__dict__[i] for i in estilos])
 
-
 class CodigosColores:
     '''
     Clase que heredan  las regiones y caracteres a colorear.
@@ -137,9 +128,9 @@ class ColoresImpresionDisponibles:
 
     
     class CARACTER(CodigosColores):
-        D, R, G, Y, B, M, G, W = CodigosColores.obtener_codigos(CodigosColores.CARACTER)
+        D, R, G, Y, B, M, C, W = CodigosColores.obtener_codigos(CodigosColores.CARACTER)
     class F0ND0(CodigosColores):
-        D, R, G, Y, B, M, G, W = CodigosColores.obtener_codigos(CodigosColores.FONDO)
+        D, R, G, Y, B, M, C, W = CodigosColores.obtener_codigos(CodigosColores.FONDO)
 
 
 class AtributosRespuestasModeloDB(Base_):
@@ -191,7 +182,9 @@ class Respuestas(AtributosRespuestasModeloDB, EstadosRespuesta, TiposRespuesta):
     def resultados_fallidos(cls, mensaje: str, detalles_error: Exception):
         return cls.preparar_respuesta(cls.FALLIDO, cls.MENSAJE, mensaje + ErroresPrevistos.detalles(detalles_error))
 
-class Test:
+
+class TestConfiguracion:
+    """Clase de pruebas"""
     def test_AtributosCentroEscolar():
         print(AtributosCentroEscolar.obtener_como_diccionario)
 
@@ -225,12 +218,13 @@ class Test:
         print(ColoresImpresionDisponibles.F0ND0.M + "Hola hola", sep="\n")
         print(EstilosImpresionCaracteres.NORMAL + "Hola", sep="\n")
 
+    def test_Respuesta():
+        print(Respuestas.estado_conexion_exitoso())
 
 
 
 if __name__=="__main__":
-    Respuestas.estado_conexion_exitoso(12)
-
+    TestConfiguracion.test_Respuesta()
 
 """ 
 class Class: # Solo definir para el tipo de entrada
