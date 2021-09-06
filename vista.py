@@ -1,10 +1,12 @@
 import os
-from typing import Union
-from configuracion import *
+from typing import Union,Optional
 from configuracion import (
+    UbicacionCentroEscolar as Ubicacion,
     AtributosCentroEscolar as CE,
     ColoresImpresionDisponibles as Color,
-    EstilosImpresionCaracteres as Estilo
+    EstilosImpresionCaracteres as Estilo,
+    Respuestas as Resp,
+    con_gestion_de_errores
 )
 class Visualizador():
 
@@ -22,32 +24,42 @@ class Visualizador():
         self.limpiar_pantalla()
 
 
-    def limpiar_pantalla(self) -> bool:
+    def limpiar_pantalla(self) -> None:
         # windows
         if os.name == 'nt':
             _ = os.system('cls')
         # Mac and Linux
         else:
             _ = os.system('clear')
-        return True
 
     def pintar_pantalla(self) -> bool:
-            pass
+        estilo_cabecera = Estilo.NEGRITA+ Color.F0ND0.D + Color.CARACTER.M
+        linea_decorativa = "*"*self.ancho_maximo_caracteres
+        aplicacion_saludo = f"""*{"CONTROL DE LISTADO DE CENTROS ESCOLARES".center(self.ancho_maximo_caracteres - 2)}*
+        \r*{"¡Bienvenido!".center(self.ancho_maximo_caracteres - 2)}*"""
+        cabecera = \
+            f"""{estilo_cabecera + linea_decorativa}
+            \r{aplicacion_saludo}
+            \r{linea_decorativa + Estilo.NORMAL}
+            """
+        print(cabecera)
+        
+        return True
 
-    def visualizar_mensaje(self, data: dict[str, str]) -> bool:
+    def visualizar_mensaje(self, data: dict[str, str], espera_respuesta: Optional[bool]) -> bool:
         mensaje = ""
-        if data[Respuestas.ESTADO]==Respuestas.FALLIDO:
+        if data[Resp.ESTADO]==Resp.FALLIDO:
             mensaje = \
             f"""{Estilo.NEGRITA + Color.F0ND0.Y + Color.CARACTER.D + "ERROR:".center(self.ancho_maximo_caracteres)}
-            \r{Estilo.NORMAL + Color.F0ND0.D + Color.CARACTER.R + data[Respuestas.CONTENIDO].ljust(self.ancho_maximo_caracteres)}
+            \r{Estilo.NORMAL + Color.F0ND0.D + Color.CARACTER.R + data[Resp.CONTENIDO].ljust(self.ancho_maximo_caracteres)}
             {Estilo.NORMAL}"""
         else:
             mensaje = \
             f"""{Estilo.NEGRITA + Color.F0ND0.B + "INFORMACIÓN:".center(self.ancho_maximo_caracteres)}
-            \r{Estilo.NORMAL + Color.F0ND0.D + Color.CARACTER.G + data[Respuestas.CONTENIDO].center(self.ancho_maximo_caracteres)}
+            \r{Estilo.NORMAL + Color.F0ND0.D + Color.CARACTER.G + data[Resp.CONTENIDO].center(self.ancho_maximo_caracteres)}
             {Estilo.NORMAL}"""
         print(mensaje)
-        return True
+        return input("\n>") if espera_respuesta else None
 
     def visualizar_lista_centros(self, lista_centros: list[dict[str,Union[str, int]]]) -> bool:
         contenido_filas = ""
@@ -66,10 +78,8 @@ class Visualizador():
         print(contenido_filas)
         return True
 
-    def requerir_informacion(self, informacion: dict) -> dict:
-        pass
 
-    def formatear_fila_centro_escolar(self, centro):
+    def formatear_fila_centro_escolar(self, centro) -> tuple:
             codigo = str(centro[CE.CODIGO]).center(self.ancho_codigo_infraestructura, " ")
             nombre = centro[CE.NOMBRE].center(self.ancho_centro_escolar, " ")
             departamento = centro[CE.DEPARTAMENTO_CENTRO].center(self.ancho_departamento, " ")
@@ -77,7 +87,20 @@ class Visualizador():
             return codigo, nombre, departamento, municipio
 
 
+    def seleccionar_municipio(self, departamento: int):
+        municipios = Ubicacion
+        ancho_maximo =  self.ancho_municipio
+        mensaje = "Por favor escriba el número correspondiente al Municipio"
+
+
+    def seleccionar_ubicacion(self, mensaje: str, diccionario_ubicaciones: dict) -> bool:
+        opciones_ubicacion = None
+        print(opciones_ubicacion)
+        diccionario_mensaje = Resp.preparar_respuesta(Resp.EXITOSO, Resp.MENSAJE, mensaje)
+        numero_ubicacion = self.visualizar_mensaje(diccionario_mensaje, True)
+        return numero_ubicacion
+
 if __name__ == "__main__":
     v = Visualizador()
     v.limpiar_pantalla()
-    print(v.ancho_centro_escolar)
+    v.pintar_pantalla()

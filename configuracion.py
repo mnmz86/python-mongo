@@ -1,5 +1,13 @@
 from  collections import OrderedDict
-from typing import Callable, Generator, Union, Iterator
+from typing import Callable, Union, Iterator, Optional
+from functools import wraps # Preserva la información de funciones, como el nombre, lo uso en gestión de errores
+from pymongo.errors import (
+    ConnectionFailure, 
+    AutoReconnect, 
+    ExecutionTimeout, 
+    ServerSelectionTimeoutError, 
+    OperationFailure
+    )
 
 class Base_:
     @classmethod
@@ -181,6 +189,41 @@ class Respuestas(AtributosRespuestasModeloDB, EstadosRespuesta, TiposRespuesta):
     @classmethod
     def resultados_fallidos(cls, mensaje: str, detalles_error: Exception):
         return cls.preparar_respuesta(cls.FALLIDO, cls.MENSAJE, mensaje + ErroresPrevistos.detalles(detalles_error))
+
+
+def con_gestion_de_errores(funcion: Callable) -> Callable:
+    """ Gestion de los errores en la ejecución del código """
+
+    @wraps(funcion)
+    def decorador(*args: Union[int, str, dict], **kwargs: Optional[int]) -> dict:
+        try:
+            resultado = funcion(*args, *kwargs)
+            return resultado
+        except AssertionError as error:
+            return Respuestas.resultados_fallidos("Error en los datos.", error)
+
+        except (AutoReconnect, ConnectionFailure) as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.CONEXION_FALLIDA, error)
+
+        except (ExecutionTimeout, ServerSelectionTimeoutError) as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.TIEMPO_EXCEDIDO, error)
+
+        except OperationFailure as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.PETICIONES_INCORRECTAS, error)
+
+        except StopIteration as error: # FALTA MANEJAR LOS GENERADORES
+            return Respuestas.resultados_fallidos(ErroresPrevistos.FIN_ITERACIONES, error)
+
+        except KeyError as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.FUERA_DE_RANGO, error)
+
+        except ValueError as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.NO_ES_NUMERO, error)
+
+        except Exception as error:
+            return Respuestas.resultados_fallidos(ErroresPrevistos.OTRAS_CAUSAS, error)
+
+    return decorador
 
 
 class TestConfiguracion:

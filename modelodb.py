@@ -8,56 +8,12 @@ from typing import ( # Mejora las anotaciones en el código
     )
 from configuracion import( # Variables globales
     ConfiguracionDB as DB,
-    ErroresPrevistos as Error,
     AtributosCentroEscolar as CE,
-    Respuestas as Resp
+    ErroresPrevistos as Error,
+    Respuestas as Resp,
+    con_gestion_de_errores
     )
-from functools import wraps # Preserva la información de funciones, como el nombre, lo uso en gestión de errores
 from pymongo import MongoClient, ASCENDING
-from pymongo.errors import (
-    ConnectionFailure, 
-    AutoReconnect, 
-    ExecutionTimeout, 
-    ServerSelectionTimeoutError, 
-    OperationFailure
-    )
-
-
-
-def con_gestion_de_errores(funcion: Callable) -> Callable:
-
-    """ Gestion de los errores en la ejecución del código """
-
-    @wraps(funcion)
-    def decorador(*args: Union[int, str, dict], **kwargs: Optional[int]) -> dict:
-        try:
-            resultado = funcion(*args, *kwargs)
-            return resultado
-        except AssertionError as error:
-            return Resp.resultados_fallidos("Error en los datos.", error)
-
-        except (AutoReconnect, ConnectionFailure) as error:
-            return Resp.resultados_fallidos(Error.CONEXION_FALLIDA, error)
-
-        except (ExecutionTimeout, ServerSelectionTimeoutError) as error:
-            return Resp.resultados_fallidos(Error.TIEMPO_EXCEDIDO, error)
-
-        except OperationFailure as error:
-            return Resp.resultados_fallidos(Error.PETICIONES_INCORRECTAS, error)
-
-        except StopIteration as error: # FALTA MANEJAR LOS GENERADORES
-            return Resp.resultados_fallidos(Error.FIN_ITERACIONES, error)
-
-        except KeyError as error:
-            return Resp.resultados_fallidos(Error.FUERA_DE_RANGO, error)
-
-        except ValueError as error:
-            return Resp.resultados_fallidos(Error.NO_ES_NUMERO, error)
-
-        except Exception as error:
-            return Resp.resultados_fallidos(Error.OTRAS_CAUSAS, error)
-
-    return decorador
 
 
 class CentroEducativo():
@@ -232,7 +188,7 @@ class TestModeloDB:
 
 
 if __name__ == "__main__":
-    #TestModeloDB.test_EstadoConexion()
+    TestModeloDB.test_EstadoConexion()
     #TestModeloDB.test_Generador()
     
 
